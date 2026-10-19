@@ -1,0 +1,10 @@
+PROJECT CLICKY AI - END USER LICENSE AGREEMENT (DRAFT TEMPLATE)
+
+This is a placeholder agreement. Have a lawyer replace it before public distribution.
+
+1. License. You may install and use this software on devices you own or control.
+2. Your data. When you activate the assistant, a screenshot, your question and (if you use voice) your audio are sent to Groq's cloud API using YOUR Groq API key. They leave your device and are processed under Groq's terms and privacy policy. Nothing is captured until you activate the assistant.
+3. Permissions. The software asks for Screen Recording, Microphone and Accessibility access. You may revoke them at any time in macOS System Settings.
+4. Automation. The assistant only acts on your computer under the action policy you choose, and always asks before sensitive actions (sending, submitting, purchasing, deleting, accepting terms). It will not bypass CAPTCHAs or verification codes.
+5. No warranty. The software is provided "as is". AI output can be wrong; verify before relying on it.
+6. Responsibility. You are responsible for how you use the software, including compliance with the terms of websites and services you use it with.

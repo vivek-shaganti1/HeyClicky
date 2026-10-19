@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+<title>Clicky companion</title>
+<style>
+  :root{--ai:#0a84ff}
+  html,body{margin:0;background:transparent;overflow:hidden;font:400 13px/1.4 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#f5f5f7;-webkit-font-smoothing:antialiased;user-select:none}
+  #wrap{position:absolute;left:16px;top:16px;display:flex;align-items:flex-start;gap:6px}
+  #orb{position:relative;width:18px;height:18px;margin-top:2px}
+  #orb svg{width:18px;height:18px;filter:drop-shadow(0 0 6px var(--ai)) drop-shadow(0 2px 4px rgba(0,0,0,.4));transition:transform .3s cubic-bezier(.32,.72,0,1)}
+  #ring{position:absolute;inset:-6px;border-radius:50%;border:1.5px solid var(--ai);opacity:0}
+  .thinking #ring{opacity:.8;border-top-color:transparent;animation:spin .9s linear infinite}
+  .talking #orb svg,.drawing #orb svg{transform:scale(1.12)}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #pill{display:flex;align-items:center;gap:8px;max-width:260px;padding:6px 11px;border-radius:12px;background:rgba(28,28,30,.78);
+    backdrop-filter:blur(26px) saturate(1.8);-webkit-backdrop-filter:blur(26px) saturate(1.8);border:.5px solid rgba(255,255,255,.12);box-shadow:0 10px 30px rgba(0,0,0,.35);
+    transition:opacity .25s,transform .3s cubic-bezier(.32,.72,0,1)}
+  #pill.empty{opacity:0;transform:translateY(-3px)}
+  #bubble{font-size:12.5px;letter-spacing:-.1px}
+  #wave{display:none;gap:2px;align-items:center;height:14px}
+  #wave i{display:block;width:2.5px;border-radius:2px;background:#ff9f0a;height:3px;transition:height .08s}
+  .listening #wave,.dictating #wave{display:flex}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head>
+<body class="idle">
+<div id="wrap" role="status" aria-live="polite">
+  <div id="orb" aria-hidden="true"><div id="ring"></div><svg viewBox="0 0 24 24"><path d="M3 2l17 8.5-7.2 1.8L9.6 20z" fill="var(--ai)" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/></svg></div>
+  <div id="pill" class="empty"><span id="wave" aria-label="Listening"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="bubble"></span></div>
+</div>
+<script src="buddy.js"></script>
+</body></html>

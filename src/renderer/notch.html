@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+<title>clicky notch</title>
+<style>
+  :root{--nw:185px;--nh:32px;--off:0px;--wing:44px;--acc:#0a84ff;--acc2:#64d2ff;--fg:#f5f5f7;--mut:#8e8e93;--line:rgba(255,255,255,.08);--fill:rgba(255,255,255,.06)}
+  html,body{margin:0;background:transparent;overflow:hidden;font:400 13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;color:var(--fg);-webkit-font-smoothing:antialiased;user-select:none;letter-spacing:-.08px}
+  #island{position:absolute;left:calc(50% + var(--off));top:0;transform:translateX(-50%);background:#000;overflow:hidden;cursor:pointer;
+    width:var(--w,var(--nw));height:var(--h,var(--nh));border-radius:0 0 calc(var(--nh) * .34) calc(var(--nh) * .34);
+    transition:width .5s cubic-bezier(.32,.72,0,1),height .5s cubic-bezier(.32,.72,0,1),border-radius .45s cubic-bezier(.32,.72,0,1),box-shadow .4s}
+  #island.hover{--w:calc(var(--nw) + 36px)}
+  #island.active{--w:calc(var(--nw) + 2 * var(--wing))}
+  #island.open{--w:460px;--h:calc(var(--nh) + 452px);border-radius:0 0 26px 26px;cursor:default;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 .5px rgba(255,255,255,.06)}
+  @media (prefers-reduced-motion:reduce){#island{transition:none}}
+  #pill{position:absolute;left:0;right:0;top:0;height:var(--nh);display:flex;align-items:center;justify-content:space-between;padding:0 13px}
+  #pill > *{opacity:0;transition:opacity .25s} .hover #pill > *,.active #pill > *,.open #pill > *{opacity:1}
+  #face{width:15px;height:15px;display:grid;place-items:center}
+  #face svg{width:13px;height:13px;filter:drop-shadow(0 0 6px var(--acc))}
+  #dot{width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc)}
+  .listening #dot,.dictating #dot{background:#ff9f0a;box-shadow:0 0 10px #ff9f0a}
+  .thinking #dot{background:#bf5af2;box-shadow:0 0 10px #bf5af2}
+  .talking #dot,.drawing #dot{background:var(--acc2);box-shadow:0 0 10px var(--acc2)}
+  .error #dot{background:#ff453a;box-shadow:0 0 10px #ff453a}
+  @media (prefers-reduced-motion:no-preference){.listening #dot,.dictating #dot,.thinking #dot{animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.35}}}
+  #wave{display:none;gap:2px;align-items:center;height:14px;position:absolute;right:26px}
+  #wave i{width:2.5px;height:3px;border-radius:2px;background:#ff9f0a;transition:height .08s}
+  .listening #wave,.dictating #wave{display:flex}
+  #badge{display:none;position:absolute;left:32px;min-width:14px;height:14px;border-radius:7px;background:var(--acc);font-size:9.5px;font-weight:600;text-align:center;line-height:14px;padding:0 3px}
+  .unread:not(.open) #badge{display:block}
+  #home{position:absolute;left:0;right:0;top:var(--nh);bottom:0;display:flex;flex-direction:column;padding:10px 16px 14px;gap:10px;opacity:0;transform:translateY(-6px) scale(.985);transition:opacity .28s .14s,transform .4s .1s cubic-bezier(.32,.72,0,1);pointer-events:none}
+  .open #home{opacity:1;transform:none;pointer-events:auto}
+  #top{display:flex;align-items:center;gap:6px;padding:0 2px}
+  #top b{flex:1;font-size:13px;font-weight:600;letter-spacing:-.1px} #status{font-weight:400;color:var(--mut);margin-left:6px}
+  .icon{all:unset;cursor:pointer;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#d1d1d6;transition:background .15s,color .15s}
+  .icon svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .icon:hover{background:var(--fill);color:#fff}
+  .icon:focus-visible,#grid button:focus-visible,#input:focus-visible,.btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  #thread{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:2px;user-select:text;scroll-behavior:smooth;scrollbar-width:none;mask-image:linear-gradient(transparent,#000 14px)}
+  .msg{max-width:84%;padding:8px 12px;border-radius:16px;font-size:13.5px;line-height:1.45;white-space:pre-wrap;word-wrap:break-word;animation:pop .32s cubic-bezier(.32,.72,0,1)}
+  .msg.user{align-self:flex-end;background:var(--acc);color:#fff;border-bottom-right-radius:5px}
+  .msg.assistant{align-self:flex-start;background:#1c1c1e;border:.5px solid var(--line);border-bottom-left-radius:5px}
+  .msg.system{align-self:center;color:var(--mut);font-size:12px;text-align:center;padding:2px 8px}
+  .msg.err{color:#ff6961}
+  .msg.streaming::after{content:'';display:inline-block;width:6px;height:6px;margin-left:6px;border-radius:50%;background:var(--acc2);vertical-align:middle;animation:pulse 1s infinite}
+  @keyframes pop{from{transform:translateY(4px);opacity:0}}
+  #empty{margin:auto;text-align:center;color:var(--mut);line-height:1.7}
+  #empty .t{color:var(--fg);font-size:15px;font-weight:600;margin-bottom:4px}
+  kbd{font:500 11px -apple-system,system-ui;background:var(--fill);border:.5px solid var(--line);border-radius:5px;padding:1px 6px;color:#e5e5ea}
+  .card{border:.5px solid rgba(10,132,255,.45);background:rgba(10,132,255,.08);border-radius:14px;padding:10px 12px;font-size:12.5px}
+  .card .row{display:flex;gap:6px;margin-top:9px}
+  .btn{all:unset;cursor:pointer;padding:5px 13px;border-radius:7px;background:var(--fill);font-weight:500;font-size:12px}
+  .btn.primary{background:var(--acc);color:#fff}
+  #composer{display:flex;gap:4px;align-items:center;background:#1c1c1e;border:.5px solid var(--line);border-radius:12px;padding:4px 4px 4px 12px;transition:border-color .2s}
+  #composer:focus-within{border-color:rgba(10,132,255,.6)}
+  #input{all:unset;flex:1;font-size:13.5px;user-select:text}
+  #input::placeholder{color:#636366}
+  #mic.rec{color:#ff9f0a}
+  #grid{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+  #grid button{all:unset;cursor:pointer;white-space:nowrap;padding:5px 10px;border-radius:7px;background:var(--fill);color:#d1d1d6;font-size:12px;display:flex;gap:5px;align-items:center;transition:background .15s,color .15s}
+  #grid button svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  #grid button:hover{background:rgba(255,255,255,.12);color:#fff}
+</style></head>
+<body>
+<div id="island" class="idle" role="button" tabindex="0" aria-label="clicky. click to open" aria-expanded="false">
+  <div id="pill">
+    <span id="face" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 2l17 8.5-7.2 1.8L9.6 20z" fill="#0a84ff" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg></span><span id="badge" aria-label="unread"></span>
+    <span id="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+    <span id="dot" aria-hidden="true"></span>
+  </div>
+  <div id="home">
+    <div id="top"><b>Clicky<span id="status" role="status" aria-live="polite"></span></b>
+      <button class="icon" id="stopBtn" title="Stop" aria-label="Stop"><svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+      <button class="icon" id="clearBtn" title="New conversation" aria-label="New conversation"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+      <button class="icon" id="setBtn" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg></button>
+      <button class="icon" id="closeBtn" title="Close (Esc)" aria-label="Close"><svg viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></svg></button></div>
+    <div id="thread" aria-live="polite">
+      <div id="empty"><div class="t">What can I help with?</div>Hold <kbd>⌃</kbd> <kbd>⌥</kbd> anywhere and talk, or type below.<br>Say “agent” and a task to hand it off.</div>
+    </div>
+    <div id="cards"></div>
+    <div id="composer"><input id="input" placeholder="Ask about your screen" aria-label="Message" autocomplete="off">
+      <button class="icon" id="mic" aria-label="Talk" title="Talk"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <button class="icon" id="sendBtn" aria-label="Send" title="Send"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></div>
+    <div id="grid">
+      <button data-act="draw"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Draw &amp; ask</button><button data-act="agent"><svg viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg>Agent</button>
+      <button data-act="dictate"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></svg>Dictate</button><button data-act="teach"><svg viewBox="0 0 24 24"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2zM22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>Teach me</button>
+      <button data-act="video"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m10 9 5 3-5 3z"/></svg>Video</button><button data-act="redraw"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>Look again</button>
+    </div>
+  </div>
+</div>
+<script src="notch.js"></script>
+</body></html>

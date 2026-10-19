@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src blob: data:; style-src 'unsafe-inline'; script-src 'self'">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clicky</title>
+<style>
+  :root{--bg:#1c1c1e;--fg:#f5f5f7;--mut:#8e8e93;--card:rgba(255,255,255,.05);--acc:#0a84ff;--acc2:#64d2ff;--bad:#ff453a;--bd:rgba(255,255,255,.1);--scale:1}
+  :root[data-theme=light]{--bg:#f5f5f7;--fg:#1d1d1f;--mut:#6e6e73;--card:#fff;--bd:rgba(0,0,0,.1)}
+  :root[data-contrast=high]{--bg:#000;--fg:#fff;--mut:#fff;--card:#000;--bd:#fff;--acc:#ffd60a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:400 calc(13px*var(--scale))/1.45 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;letter-spacing:-.08px}
+  header{display:flex;align-items:center;gap:8px;padding:12px 14px;-webkit-app-region:drag;border-bottom:.5px solid var(--bd)}
+  header>*{-webkit-app-region:no-drag}
+  .face{width:20px;height:20px;display:grid;place-items:center;font-size:0}
+  .face::before{content:'';width:14px;height:14px;background:var(--acc);clip-path:polygon(12% 8%,92% 46%,58% 54%,44% 92%);filter:drop-shadow(0 0 4px var(--acc))}
+  h1{font-size:13px;margin:0;flex:1;font-weight:600}
+  button,select,input,textarea{font:inherit;color:inherit}
+  button{min-height:28px;padding:4px 12px;border-radius:7px;border:.5px solid var(--bd);background:var(--card);cursor:pointer;font-weight:500;transition:background .15s}
+  button:hover{background:rgba(255,255,255,.1)}
+  button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+  button.primary{background:var(--acc);color:#fff;border-color:transparent}
+  button.stop{background:var(--bad);border-color:transparent;color:#fff}
+  button[aria-pressed=true]{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.18)}
+  nav{display:flex;gap:2px;padding:8px 14px;border-bottom:.5px solid var(--bd)}
+  nav button{border:0;background:transparent;color:var(--mut)} nav button[aria-pressed=true]{color:var(--fg)}
+  main{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--card);border:.5px solid var(--bd);border-radius:12px;padding:12px}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  textarea,input[type=text],input[type=password],select{width:100%;background:rgba(0,0,0,.25);border:.5px solid var(--bd);border-radius:8px;padding:8px 10px}
+  label{display:block;margin:10px 0 4px;color:var(--mut);font-size:12px}
+  .chips span{display:inline-block;padding:1px 8px;border-radius:6px;background:var(--card);border:.5px solid var(--bd);margin:2px;font-size:11px;color:var(--mut)}
+  .status{display:flex;gap:12px;font-size:11.5px;color:var(--mut);flex-wrap:wrap}
+  .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--mut);margin-right:5px}
+  .dot.on{background:#ff9f0a} .err{color:var(--bad)} .hidden{display:none!important}
+  ul{margin:4px 0;padding-left:18px}
+  @media (prefers-reduced-motion: no-preference){.pulse{animation:p 1.2s infinite}@keyframes p{50%{opacity:.4}}}
+</style></head>
+<body>
+<header>
+  <div class="face" aria-hidden="true">🙂</div><h1>Clicky <span id="busy" class="hidden pulse" role="status">Thinking…</span></h1>
+  <button id="stop" class="stop hidden" aria-label="Stop current operation">Stop</button>
+  <button id="hide" aria-label="Close (Escape)">Done</button>
+</header>
+<nav role="tablist" aria-label="Modes">
+  <button data-tab="ask" aria-pressed="true">Ask</button>
+  <button data-tab="video" aria-pressed="false">Video</button>
+  <button data-tab="teach" aria-pressed="false">Teach</button>
+  <button data-tab="agent" aria-pressed="false">Agent</button>
+  <button data-tab="settings" aria-pressed="false">Settings</button>
+</nav>
+<main id="main">
+  <div class="status" aria-live="polite">
+    <span><span class="dot" id="micDot"></span><span id="micTxt">Mic off</span> <span style="display:inline-block;width:60px;height:6px;border-radius:9px;background:var(--bd);vertical-align:middle;overflow:hidden"><span id="micLevel" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#38bdf8,#22d3ee)"></span></span></span>
+    <span><span class="dot" id="scrDot"></span><span id="scrTxt">No screen captured</span></span>
+  </div>
+  <div id="err" class="card err hidden" role="alert"></div>
+
+  <section id="tab-ask">
+    <label for="q">Ask about the screen or your drawing</label>
+    <textarea id="q" rows="3" placeholder="Just talk after the shortcut, or type. Say &quot;agent …&quot; to have Clicky do a task."></textarea>
+    <div class="row" style="margin-top:6px">
+      <button id="mic" aria-pressed="false">Talk</button>
+      <button id="send" class="primary">Ask</button>
+      <button id="redraw">Redraw</button>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <button id="explainFields">Explain fields</button>
+      <button id="dictate">Dictate</button>
+      <button id="repeatSlow">Slower</button>
+    </div>
+  </section>
+
+  <section id="tab-video" class="hidden">
+    <label for="vurl">Video URL (optional)</label><input type="text" id="vurl" placeholder="https://www.youtube.com/watch?v=…">
+    <label for="vts">Current time (m:ss) — read from the player</label><input type="text" id="vts" placeholder="12:34">
+    <label for="vwin">Seconds to explain before that moment</label><input type="text" id="vwin" value="30">
+    <label for="vtr">Transcript (paste; lines like "[12:34] text") — optional</label>
+    <textarea id="vtr" rows="4" placeholder="Without a transcript I can only describe the captured frame."></textarea>
+    <button id="vgo" class="primary" style="margin-top:6px">Explain this moment</button>
+    <p id="vnote" style="color:var(--mut);font-size:.85em">The frame comes from the screen capture; I never claim to have watched the video.</p>
+  </section>
+
+  <section id="tab-teach" class="hidden">
+    <label for="tgoal">What do you want to learn to do here?</label>
+    <input type="text" id="tgoal" placeholder="e.g. Export this project as MP4">
+    <div class="row" style="margin-top:6px"><button id="tnext" class="primary">Next step</button><button id="tagain">Repeat</button></div>
+    <p style="color:var(--mut);font-size:.85em">Do the step, then press "Show next step". I re-read the screen first and won't advance on a guess.</p>
+  </section>
+
+  <section id="tab-agent" class="hidden">
+    <label for="agoal">Task for the agent</label>
+    <textarea id="agoal" rows="3" placeholder="e.g. Fill the registration form with my details"></textarea>
+    <p style="color:var(--mut);font-size:.85em">Policy: <b id="polTxt"></b>. Typing uses the keyboard after approval; clicks are guided with a ring and done by you. Sensitive steps always ask first. CAPTCHA/MFA are always handed back to you.</p>
+    <div class="row"><button id="astart" class="primary">Start</button><button id="apause">Pause</button><button id="aresume">Resume</button></div>
+    <ul id="alog" aria-live="polite"></ul>
+    <div id="approval" class="card hidden" role="alertdialog" aria-labelledby="apTitle">
+      <b id="apTitle">Your ok needed</b><p id="apText"></p>
+      <div class="row"><button id="apYes" class="primary">Approve once</button><button id="apNo">Decline</button></div>
+    </div>
+  </section>
+
+  <section id="tab-settings" class="hidden">
+    <div class="card" id="onboard">
+      <b>Quick setup</b>
+      <ol><li>Paste your Groq API key (stored encrypted via your OS keychain; never shown to web content).</li>
+      <li>Grant Screen Recording (and Microphone if you use voice).</li><li>Press the shortcut anywhere.</li></ol>
+      <p style="color:var(--mut)">Screenshots you send leave your device and are processed by Groq under its policies. Nothing is captured until you activate.</p>
+    </div>
+    <label for="key">Groq API key</label>
+    <div class="row"><input type="password" id="key" autocomplete="off" placeholder="gsk_…"><button id="saveKey">Save</button></div>
+    <div class="row" style="margin-top:6px"><button id="checkModels">Check models</button><button id="permScreen">Screen</button><button id="permMic">Mic</button><button id="permAcc">Accessibility</button></div>
+    <pre id="models" style="white-space:pre-wrap;color:var(--mut)"></pre>
+    <label for="hotkey">Global shortcut (Electron accelerator)</label><input type="text" id="hotkey">
+    <label for="policy">Action policy</label>
+    <select id="policySel"><option>GUIDANCE_ONLY</option><option>APPROVAL_REQUIRED</option><option>TRUSTED_LOW_RISK</option></select>
+    <label for="rate">Speech rate (words/min)</label><input type="text" id="rate">
+    <label><input type="checkbox" id="speak"> Speak answers</label>
+    <label for="ptrColor">AI pointer color</label><select id="ptrColor"><option value="blue">Blue</option><option value="yellow">Yellow</option><option value="orange">Orange</option><option value="red">Red</option><option value="green">Green</option></select>
+    <label><input type="checkbox" id="holdTalk"> Hold Control + Option to talk, release to send</label>
+    <label><input type="checkbox" id="voiceHk"> Start listening when I press the shortcut</label>
+    <label><input type="checkbox" id="handsFree"> Hands-free: keep listening for follow-ups after each answer</label>
+    <label><input type="checkbox" id="memory"> Remember text summaries of past questions (never screenshots)</label>
+    <label for="dictHk">Dictation shortcut (types what you say into the current app)</label><input type="text" id="dictHk">
+    <label for="theme">Theme</label><select id="theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select>
+    <label for="scale">Text size</label><select id="scale"><option value="1">Normal</option><option value="1.2">Large</option><option value="1.45">Extra large</option></select>
+    <label><input type="checkbox" id="contrast"> High contrast</label>
+    <div class="row" style="margin-top:8px"><button id="saveSet" class="primary">Save</button><button id="clearHist">Clear chat</button><button id="replay">Replay welcome</button><button id="delAll" class="stop">Delete all my data</button></div>
+    <p id="usage" style="color:var(--mut);font-size:.85em"></p>
+  </section>
+
+  <section id="out" class="card hidden" aria-live="polite">
+    <div id="ans"></div>
+    <div class="chips" id="meta"></div>
+    <details id="obsWrap"><summary>What i saw</summary><ul id="obs"></ul></details>
+    <details id="asmWrap"><summary>My guesses</summary><ul id="asm"></ul></details>
+    <div id="act"></div>
+  </section>
+</main>
+<script src="panel.js"></script>
+</body></html>

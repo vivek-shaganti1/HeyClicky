@@ -1,0 +1,78 @@
+{
+  "name": "project-clicky-ai",
+  "version": "0.1.0",
+  "description": "Screen-aware, voice-enabled AI desktop copilot powered by Groq",
+  "main": "src/main/main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/",
+    "lint": "node --check src/main/main.js && node --check src/core/groq.js",
+    "dist": "npm run build:helper && electron-builder --mac dmg",
+    "pack": "electron-builder --dir",
+    "build:helper": "mkdir -p bin && swiftc -O native/ClickyHelper.swift -o bin/clicky-helper"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "ai.clicky.desktop",
+    "productName": "Clicky AI",
+    "copyright": "Clicky AI",
+    "files": [
+      "src/**/*",
+      "package.json",
+      "build/license_en.txt"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Clicky listens only when you press the mic button, to turn your speech into a question.",
+        "NSAppleEventsUsageDescription": "Clicky types or pastes text into other apps only after you approve.",
+        "LSUIElement": true
+      }
+    },
+    "dmg": {
+      "title": "Install Clicky AI",
+      "license": "build/license_en.txt",
+      "contents": [
+        {
+          "x": 140,
+          "y": 190
+        },
+        {
+          "x": 400,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "extraResources": [
+      {
+        "from": "bin/clicky-helper",
+        "to": "clicky-helper"
+      }
+    ]
+  },
+  "allowScripts": {
+    "electron@33.4.11": true,
+    "electron-builder@25.1.8": true
+  }
+}

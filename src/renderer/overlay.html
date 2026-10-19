@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; media-src data: blob:; style-src 'unsafe-inline'; script-src 'self'">
+<title>Clicky overlay</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:transparent;font:13px -apple-system,system-ui,sans-serif}
+  #frame{position:fixed;inset:0;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none}
+  canvas{position:fixed;inset:0;width:100%;height:100%}
+  #marks{cursor:crosshair;touch-action:none}
+  #ai{pointer-events:none}
+  #frame{pointer-events:none}
+  #bar{position:fixed;top:44px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:5px;border-radius:14px;background:rgba(30,30,32,.72);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);border:.5px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.45);font:500 12px -apple-system,BlinkMacSystemFont,system-ui;color:#f5f5f7}
+  #bar .sep{width:.5px;margin:6px 4px;background:rgba(255,255,255,.15)}
+  #bar button{all:unset;cursor:pointer;height:32px;min-width:32px;padding:0 8px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:5px;color:#d1d1d6;transition:background .15s,color .15s}
+  #bar button:hover{background:rgba(255,255,255,.08);color:#fff}
+  #bar svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  #bar button[aria-pressed=true]{background:var(--ai-dark);color:#fff}
+  #bar button:focus-visible{outline:2px solid var(--ai);outline-offset:1px}
+  #hint{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:7px 14px;border-radius:10px;font:400 12px -apple-system,system-ui;color:#e5e5ea;background:rgba(30,30,32,.7);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:.5px solid rgba(255,255,255,.12)}
+  #hint kbd{font:500 11px -apple-system;background:rgba(255,255,255,.1);border-radius:4px;padding:1px 5px}
+  #aicursor{position:fixed;left:0;top:0;width:34px;height:34px;margin:-4px 0 0 -4px;pointer-events:none;z-index:5;will-change:transform;filter:drop-shadow(0 0 10px #22d3ee) drop-shadow(0 4px 8px #0008)}
+  #aicursor span{position:absolute;left:28px;top:24px;white-space:nowrap;font:500 11.5px -apple-system,system-ui;color:#fff;padding:3px 9px;border-radius:7px}
+  #caption{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);max-width:min(720px,88vw);padding:11px 18px;border-radius:14px;color:#f5f5f7;font:400 16px/1.45 -apple-system,BlinkMacSystemFont,system-ui;letter-spacing:-.2px;text-align:center;background:rgba(28,28,30,.72);backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);border:.5px solid rgba(255,255,255,.12);box-shadow:0 14px 44px rgba(0,0,0,.4);z-index:6;animation:capin .3s cubic-bezier(.32,.72,0,1)}
+  @keyframes capin{from{opacity:0;transform:translate(-50%,6px)}}
+  :root{--ai:#22d3ee;--ai-dark:#2563eb}
+  #aicursor{filter:drop-shadow(0 0 10px var(--ai)) drop-shadow(0 4px 8px #0008)!important;transition:scale .18s}
+  #aicursor span{background:var(--ai-dark)!important;box-shadow:0 4px 12px rgba(0,0,0,.35)}
+  #aicursor .hand{display:none;position:absolute;left:-4px;top:-6px;font-size:30px}
+  #aicursor.grab svg{display:none} #aicursor.grab .hand{display:block} #aicursor.grab{scale:.92}
+  #ghost{position:fixed;left:0;top:0;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:10px;border:2px dashed var(--ai);background:color-mix(in srgb,var(--ai) 25%,transparent);pointer-events:none;z-index:4}
+  #ripple{position:fixed;left:0;top:0;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;border:3px solid var(--ai);opacity:0;pointer-events:none;z-index:4}
+  #ripple.go{animation:rip .7s ease-out}
+  @keyframes rip{0%{opacity:1;scale:1}100%{opacity:0;scale:7}}
+  .hidden{display:none!important}
+</style></head>
+<body>
+<img id="frame" alt="Frozen screenshot of your display. Draw to mark regions.">
+<canvas id="marks" aria-hidden="true"></canvas>
+<canvas id="ai" aria-hidden="true"></canvas>
+<div id="bar" role="toolbar" aria-label="Drawing tools">
+  <button data-tool="pen" aria-pressed="true" title="Pen (1)" aria-label="Pen"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+  <button data-tool="circle" aria-pressed="false" title="Circle (2)" aria-label="Circle"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg></button>
+  <button data-tool="rect" aria-pressed="false" title="Box (3)" aria-label="Box"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="2"/></svg></button>
+  <button data-tool="arrow" aria-pressed="false" title="Arrow (4)" aria-label="Arrow"><svg viewBox="0 0 24 24"><path d="M5 19 19 5M9 5h10v10"/></svg></button>
+  <button data-tool="highlight" aria-pressed="false" title="Highlight (5)" aria-label="Highlight"><svg viewBox="0 0 24 24"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg></button>
+  <button data-tool="redact" aria-pressed="false" title="Hide before sending (6)" aria-label="Hide region"><svg viewBox="0 0 24 24"><path d="M9.9 4.2A10.9 10.9 0 0 1 12 4c7 0 10 8 10 8a13 13 0 0 1-1.7 2.7M6.6 6.6A13.5 13.5 0 0 0 2 12s3 8 10 8a9.7 9.7 0 0 0 5.4-1.6M2 2l20 20"/></svg></button><span class="sep"></span>
+  <button id="undo" title="Undo (⌘Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+  <button id="clear" title="Clear (C)" aria-label="Clear"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg></button>
+  <button id="live" aria-pressed="false" title="Use your screen normally, keep drawings (L)" aria-label="Live"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+  <button id="done" title="Close (Esc)" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+</div>
+<div id="aicursor" class="hidden" aria-hidden="true"><svg viewBox="0 0 24 24" width="34" height="34"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7dd3fc"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs><path d="M3 2l17 8.5-7.2 1.8L9.6 20z" fill="var(--ai)" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg><b class="hand" aria-hidden="true">✊</b><span>Clicky</span></div>
+<div id="ghost" class="hidden" aria-hidden="true"></div>
+<div id="ripple" aria-hidden="true"></div>
+<div id="caption" class="hidden" role="status" aria-live="polite"></div>
+<div id="hint">Draw on anything, then just talk &nbsp;·&nbsp; <kbd>T</kbd> to type &nbsp;·&nbsp; <kbd>esc</kbd> to close</div>
+<script src="overlay.js"></script>
+</body></html>
