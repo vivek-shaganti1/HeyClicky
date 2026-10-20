@@ -1,0 +1,157 @@
+:root {
+  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-geist-mono: 'Geist Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
+  --font-instrument-serif: 'Instrument Serif', Georgia, serif;
+}
+
+body {
+  font-family: var(--font-inter);
+  background: #f5f5f5;
+  color: #000;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* Force all reveal elements to be visible */
+.reveal, .man-window.reveal, .fb-wall.reveal, .pr-cards.reveal, .faq-list.reveal {
+  opacity: 1 !important;
+  transform: none !important;
+  translate: 0 !important;
+  scale: 1 !important;
+  visibility: visible !important;
+}
+
+/* Make stage flow naturally */
+.stage {
+  width: 100% !important;
+  max-width: 1440px !important;
+  height: auto !important;
+  margin: 0 auto !important;
+  position: relative !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* Flow sections sequentially without artificial absolute offsets */
+.hero {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  width: 1440px !important;
+  height: 966px !important;
+  margin: 0 auto !important;
+}
+
+.feat {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  width: 1440px !important;
+  margin: 40px auto 0 !important;
+  padding-bottom: 80px !important;
+}
+
+.man-section {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  width: 1440px !important;
+  height: 768px !important;
+  margin: 40px auto 0 !important;
+}
+
+.side-fade {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  margin: 0 auto !important;
+}
+
+.section-stroke {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  width: 1440px !important;
+  height: 1px !important;
+  background: rgba(0, 0, 0, 0.08) !important;
+  margin: 20px auto !important;
+}
+
+.fb {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  width: 1440px !important;
+  margin: 40px auto 0 !important;
+  padding-bottom: 80px !important;
+}
+
+.pr {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  width: 1440px !important;
+  margin: 40px auto 0 !important;
+  padding-bottom: 80px !important;
+}
+
+.faq {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  width: 1440px !important;
+  margin: 40px auto 0 !important;
+  padding-bottom: 80px !important;
+}
+
+.footer {
+  position: relative !important;
+  top: 0 !important;
+  left: auto !important;
+  width: 1440px !important;
+  height: 592px !important;
+  margin: 40px auto 0 !important;
+}
+
+.footer-mark {
+  position: absolute !important;
+  top: 240px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 1139px !important;
+  height: 297px !important;
+  opacity: 1 !important;
+}
+
+.footer-decor {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Ensure smooth interactions and crisp rendering */
+.no-drag {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.draggable {
+  cursor: grab;
+  user-select: none;
+}
+.draggable:active {
+  cursor: grabbing;
+}
+
+/* Video modal styles */
+.hero-modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  backdrop-filter: blur(8px) !important;
+  z-index: 1000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}

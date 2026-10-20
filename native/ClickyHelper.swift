@@ -153,6 +153,24 @@ DispatchQueue.global().async {
             case "activate":
                 let ok = (cmd["pid"] as? Int).flatMap { NSRunningApplication(processIdentifier: pid_t($0)) }?.activate() ?? false
                 res = ["ok": ok]
+            case "screenCaptureStatus":
+                var screenOk = false
+                if #available(macOS 10.15, *) {
+                    screenOk = CGPreflightScreenCaptureAccess()
+                } else {
+                    screenOk = true
+                }
+                res = ["ok": true, "screen": screenOk]
+            case "requestPermissions":
+                var screenOk = false
+                if #available(macOS 10.15, *) {
+                    screenOk = CGRequestScreenCaptureAccess()
+                } else {
+                    screenOk = true
+                }
+                let axDict = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+                let axOk = AXIsProcessTrustedWithOptions(axDict)
+                res = ["ok": true, "screen": screenOk, "accessibility": axOk]
             default: res = ["ok": false, "error": "unknown_command"]
             }
             res["rid"] = rid
@@ -169,6 +187,8 @@ NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActiva
     }
 }
 if let f = NSWorkspace.shared.frontmostApplication { emit(["event": "app", "pid": Int(f.processIdentifier), "app": f.localizedName ?? ""]) }
-emit(["event": "ready", "trusted": AXIsProcessTrusted()])
+let axDict = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+let axTrusted = AXIsProcessTrustedWithOptions(axDict)
+emit(["event": "ready", "trusted": axTrusted])
 NSApplication.shared.setActivationPolicy(.prohibited)
 NSApplication.shared.run()

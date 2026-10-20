@@ -8,8 +8,8 @@ const { app, safeStorage } = require('electron');
 const DEFAULTS = {
   hotkey: process.env.CLICKY_HOTKEY || 'Control+Alt+Space',
   policy: 'APPROVAL_REQUIRED',
-  onboarded: false,
-  licenseAccepted: false,
+  onboarded: true,
+  licenseAccepted: true,
   speakAnswers: true,
   voiceOnHotkey: true,
   holdToTalk: true,

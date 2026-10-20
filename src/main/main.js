@@ -194,7 +194,10 @@ async function activateInner({ mode = 'quick' } = {}) {
   cancelAll();
   console.log('[clicky] hotkey/activate; screen permission =', capture.permissionStatus());
   if (capture.permissionStatus() !== 'granted') {
-    notchSay('system', 'Screen Recording is off, so I can only chat by text. Turn it on in Settings.');
+    if (helper && helper.call) helper.call('requestPermissions').catch(() => {});
+    desktopCapturerProbe().catch(() => {});
+    shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+    notchSay('system', 'Please enable Screen Recording in System Settings so I can see your screen.');
     openNotch({ focus: 'composer' });
     if (!panel) createPanel();
     send(panel, 'activate', { mode: mode === 'voice' ? 'voice' : 'text', hasFrame: false });
@@ -557,17 +560,34 @@ function wireIpc() {
     return shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?${pane}`);
   });
   ipcMain.handle('readLicense', () => fs.readFileSync(path.join(__dirname, '..', '..', 'build', 'license_en.txt'), 'utf8'));
-  ipcMain.handle('permStatus', () => ({
-    screen: capture.permissionStatus(),
-    mic: process.platform === 'darwin' ? systemPreferences.getMediaAccessStatus('microphone') : 'granted',
-    access: process.platform === 'darwin' ? systemPreferences.isTrustedAccessibilityClient(false) : true,
-    hasKey: store.hasApiKey(), licenseAccepted: settings.licenseAccepted,
-  }));
+  ipcMain.handle('permStatus', async () => {
+    let screenStatus = capture.permissionStatus();
+    if (screenStatus !== 'granted' && helper && helper.call) {
+      try {
+        const sc = await helper.call('screenCaptureStatus');
+        if (sc && sc.screen) screenStatus = 'granted';
+      } catch {}
+    }
+    return {
+      screen: screenStatus,
+      mic: process.platform === 'darwin' ? systemPreferences.getMediaAccessStatus('microphone') : 'granted',
+      access: process.platform === 'darwin' ? systemPreferences.isTrustedAccessibilityClient(false) : true,
+      hasKey: store.hasApiKey(), licenseAccepted: settings.licenseAccepted,
+    };
+  });
   ipcMain.handle('requestPerm', async (_e, which) => {
     // Each call triggers the genuine macOS prompt; the user decides. Nothing is granted silently.
-    if (which === 'mic') await systemPreferences.askForMediaAccess('microphone');
-    else if (which === 'access') systemPreferences.isTrustedAccessibilityClient(true);
-    else if (which === 'screen') await desktopCapturerProbe();
+    if (which === 'mic') {
+      try { await systemPreferences.askForMediaAccess('microphone'); } catch {}
+    } else if (which === 'access') {
+      systemPreferences.isTrustedAccessibilityClient(true);
+      if (helper && helper.call) helper.call('requestPermissions').catch(() => {});
+      shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility');
+    } else if (which === 'screen') {
+      if (helper && helper.call) await helper.call('requestPermissions').catch(() => {});
+      await desktopCapturerProbe();
+      shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+    }
     return true;
   });
   ipcMain.handle('testHotkey', () => true);
@@ -672,6 +692,37 @@ app.whenReady().then(() => {
   panel.webContents.once('did-finish-load', () => {
     if (settings.onboarded && !store.hasApiKey()) { showPanel(); send(panel, 'activate', { mode: 'settings', onboarding: true }); }
   });
+
+  // Proactively check and prompt for all required macOS permissions
+  setTimeout(async () => {
+    if (process.platform !== 'darwin') return;
+    try {
+      const axTrusted = systemPreferences.isTrustedAccessibilityClient(true);
+      console.log('[clicky] startup: accessibility trusted =', axTrusted);
+      const micStatus = systemPreferences.getMediaAccessStatus('microphone');
+      if (micStatus !== 'granted') {
+        console.log('[clicky] startup: prompting microphone permission...');
+        await systemPreferences.askForMediaAccess('microphone');
+      }
+      const screenStatus = capture.permissionStatus();
+      console.log('[clicky] startup: screen recording permission =', screenStatus);
+      if (screenStatus !== 'granted') {
+        if (helper && helper.call) {
+          try { await helper.call('requestPermissions'); } catch {}
+        }
+        await desktopCapturerProbe();
+        shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture');
+        if (notch) {
+          setTimeout(() => {
+            notchSay('system', 'Enable Screen Recording for Clicky in System Settings so I can see your display and draw.');
+            openNotch({});
+          }, 1200);
+        }
+      }
+    } catch (e) {
+      console.warn('[clicky] startup permissions check:', e.message);
+    }
+  }, 1000);
 });
 app.on('will-quit', () => { globalShortcut.unregisterAll(); helper.stop(); });
 app.on('window-all-closed', (e) => e.preventDefault());

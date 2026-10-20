@@ -6,11 +6,13 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/",
+    "test": "node --test test/core.test.js",
     "lint": "node --check src/main/main.js && node --check src/core/groq.js",
     "dist": "npm run build:helper && electron-builder --mac dmg",
     "pack": "electron-builder --dir",
-    "build:helper": "mkdir -p bin && swiftc -O native/ClickyHelper.swift -o bin/clicky-helper"
+    "build:helper": "mkdir -p bin && swiftc -O native/ClickyHelper.swift -o bin/clicky-helper",
+    "web": "npm --prefix website run dev",
+    "web:build": "npm --prefix website run build"
   },
   "devDependencies": {
     "electron": "^33.0.0",
